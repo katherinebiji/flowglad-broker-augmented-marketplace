@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Honcho } from '@honcho-ai/sdk';
+import Link from 'next/link';
 
 interface Peer {
   id: string;
@@ -77,6 +78,13 @@ export default function Chat({ userId, userName }: ChatProps) {
   return (
     <div className="w-full max-w-md mx-auto border rounded p-4">
       <h2 className="text-lg font-bold mb-2">AI Broker Chat</h2>
+      <div className="mb-4">
+        <Link href="/">
+          <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded transition">
+            Go back to Vercel Boilerplate
+          </button>
+        </Link>
+      </div>
       {error && <div className="text-red-500 mb-2">{error}</div>}
       <div className="h-64 overflow-y-auto bg-gray-50 p-2 mb-2 rounded">
         {messages.map((msg, i) => (
