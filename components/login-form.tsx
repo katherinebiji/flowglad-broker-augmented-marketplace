@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Honcho } from '@honcho-ai/sdk';
 
 export function LoginForm({
   className,
@@ -28,21 +29,106 @@ export function LoginForm({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🚀 Starting login process for email:', email);
+    
     const supabase = createClient();
     setIsLoading(true);
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('🔐 Attempting Supabase auth login...');
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
+      
+      if (error) {
+        console.error('❌ Supabase login failed:', error);
+        throw error;
+      }
+
+      console.log('✅ Supabase login successful:', {
+        userId: data.user?.id,
+        email: data.user?.email
+      });
+
+      if (data.user) {
+        console.log('👤 Setting up Honcho peer for user:', data.user.id);
+        
+        try {
+          const honcho = new Honcho({});
+          console.log('🔍 Fetching existing Honcho peer...');
+          let peer = await honcho.peer(data.user.id);
+          
+          if (!peer) {
+            console.log('🆕 No existing peer found, creating new Honcho peer...');
+            peer = await honcho.peer(data.user.id);
+          } else {
+            console.log('✅ Found existing Honcho peer:', peer.id);
+          }
+
+          // Check if user already exists in our users table
+          console.log('🔍 Checking if user exists in users table...');
+          const { data: existingUser, error: fetchError } = await supabase
+            .from('users')
+            .select('id, honcho_id')
+            .eq('id', data.user.id)
+            .single();
+
+          if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+            console.error('❌ Error checking existing user:', fetchError);
+            throw fetchError;
+          }
+
+          if (!existingUser) {
+            console.log('💾 Inserting new user data into Supabase users table...');
+            const { data: insertData, error: insertError } = await supabase
+              .from('users')
+              .insert({
+                id: data.user.id,
+                honcho_id: peer.id,
+              });
+
+            if (insertError) {
+              console.error('❌ Failed to insert user data:', insertError);
+              throw insertError;
+            }
+
+            console.log('✅ User data inserted successfully:', {
+              userId: data.user.id,
+              honchoId: peer.id
+            });
+          } else {
+            console.log('✅ User already exists in database:', {
+              userId: existingUser.id,
+              honchoId: existingUser.honcho_id
+            });
+          }
+
+        } catch (honchoError) {
+          console.error('❌ Failed to setup Honcho peer or user data:', honchoError);
+          // Log the full error details for debugging
+          console.error('Honcho error details:', {
+            message: honchoError instanceof Error ? honchoError.message : honchoError,
+            stack: honchoError instanceof Error ? honchoError.stack : undefined
+          });
+          // Don't throw here - allow login to continue even if Honcho setup fails
+        }
+      } else {
+        console.warn('⚠️ No user data received from Supabase login');
+      }
+
+      console.log('🎉 Login process completed, redirecting to protected area');
       router.push("/protected");
     } catch (error: unknown) {
+      console.error('❌ Login process failed:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
+      console.log('🏁 Login process completed, setting loading to false');
       setIsLoading(false);
     }
   };

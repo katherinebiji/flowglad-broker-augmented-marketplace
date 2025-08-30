@@ -29,29 +29,51 @@ export function SignUpForm({
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🚀 Starting sign-up process for email:', email);
+    
     const supabase = createClient();
     setIsLoading(true);
     setError(null);
 
     if (password !== repeatPassword) {
+      console.warn('⚠️ Password mismatch during sign-up');
       setError("Passwords do not match");
       setIsLoading(false);
       return;
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      console.log('📧 Attempting Supabase auth sign-up...');
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/protected`,
         },
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('❌ Supabase sign-up failed:', error);
+        throw error;
+      }
+
+      console.log('✅ Supabase sign-up successful:', {
+        userId: data.user?.id,
+        email: data.user?.email,
+        emailConfirmed: data.user?.email_confirmed_at
+      });
+
+      console.log('🎉 Sign-up process completed, redirecting to success page');
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
+      console.error('❌ Sign-up process failed:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
+      console.log('🏁 Sign-up process completed, setting loading to false');
       setIsLoading(false);
     }
   };
