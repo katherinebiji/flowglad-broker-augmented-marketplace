@@ -34,6 +34,11 @@ yarn-error.log*
 .env*.local
 .env
 
+# lock files from other package managers
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+
 # vercel
 .vercel
 

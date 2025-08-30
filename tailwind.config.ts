@@ -7,9 +7,18 @@ export default {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
+    "*.{js,ts,jsx,tsx,mdx}"
   ],
   theme: {
     extend: {
+      container: {
+        center: true,
+        padding: 'var(--sides)',
+      },
+      fontFamily: {
+        sans: ['var(--font-geist-sans)', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'monospace'],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -51,13 +60,51 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          primary: 'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent: 'hsl(var(--sidebar-accent))',
+          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+          border: 'hsl(var(--sidebar-border))',
+          ring: 'hsl(var(--sidebar-ring))',
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      spacing: {
+        sides: 'var(--sides)',
+        'modal-sides': 'var(--modal-sides)',
+        'top-spacing': 'var(--top-spacing)',
+        fold: 'var(--height-fold)',
+      },
+      fontSize: {
+        xs: ['0.75rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+        sm: ['0.875rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+        base: ['1rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+        lg: ['1.125rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+        xl: ['1.25rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+        '2xl': ['1.5rem', { lineHeight: '1.2', letterSpacing: '-0.015em' }],
+      },
+      keyframes: {
+        'collapsible-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-collapsible-content-height)' },
+        },
+        'collapsible-up': {
+          from: { height: 'var(--radix-collapsible-content-height)' },
+          to: { height: '0' },
+        },
+      },
+      animation: {
+        'collapsible-down': 'collapsible-down 0.2s ease-out',
+        'collapsible-up': 'collapsible-up 0.2s ease-out',
+      },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 } satisfies Config;
