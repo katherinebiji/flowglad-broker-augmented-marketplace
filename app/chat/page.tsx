@@ -109,7 +109,7 @@ export default function ChatPage() {
                   <Bot className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">FlowGlad Assistant</h3>
+                  <h3 className="font-semibold">FlowMarketplace Assistant</h3>
                   <p className="text-sm text-neutral-600">Online</p>
                 </div>
               </div>

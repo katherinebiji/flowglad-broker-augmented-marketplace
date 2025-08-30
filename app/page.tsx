@@ -39,56 +39,112 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-16 lg:py-24">
-        <div className="max-w-4xl">
-          <div className="mb-8">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left side: Hero Copy */}
+          <div>
             <Badge variant="outline" className="mb-6 bg-neutral-100 border-neutral-300">
-              AI-Powered Negotiations
+              AI-Brokered Marketplace
             </Badge>
-            
+
             <h1 className="text-5xl lg:text-6xl font-bold tracking-tight leading-tight mb-6">
-              Refined. Minimal.
+              Buy & Sell with ease
               <br />
-              <span className="text-neutral-600">Never boring.</span>
+              <span className="text-neutral-600">with a Built-In Broker.</span>
             </h1>
-            
+
             <div className="space-y-4 text-lg text-neutral-600 mb-12 max-w-2xl">
-              <p>Marketplace that speaks softly, but stands out loud.</p>
+              <p>AI handles the haggling — you focus on the deal.</p>
               <p>Clean negotiations, crafted with AI.</p>
-              <p>Elegance with intelligence — style first.</p>
+              <p>Dynamic markdowns, trusted payments, smarter trades.</p>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-wrap gap-4 mb-16">
+              <Button asChild size="lg" className="bg-black text-white hover:bg-neutral-800">
+                <Link href="/shop">
+                  Shop Now
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-neutral-300 hover:bg-neutral-50">
+                <Link href="/chat">
+                  Try AI Broker (Seller or Buyer)
+                </Link>
+              </Button>
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-4 mb-16">
-            <Button asChild size="lg" className="bg-black text-white hover:bg-neutral-800">
-              <Link href="/shop">
-                Shop Now
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-neutral-300 hover:bg-neutral-50">
-              <Link href="/chat">
-                Try AI Assistant
-              </Link>
-            </Button>
-          </div>
+          {/* Right side: Chat Demo */}
+          <div className="relative w-full h-[500px] bg-white rounded-2xl shadow-lg border border-neutral-200 overflow-hidden">
+            {/* Chat Header */}
+            <div className="bg-neutral-100 border-b border-neutral-200 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">AI Broker</h4>
+                  <p className="text-xs text-neutral-500">Negotiating for you</p>
+                </div>
+              </div>
+            </div>
 
-          {/* Features */}
-          <div className="grid md:grid-cols-3 gap-8 mb-20">
-            <div className="space-y-2">
-              <Bot className="h-8 w-8 text-neutral-700 mb-4" />
-              <h3 className="font-semibold text-lg">AI Negotiations</h3>
-              <p className="text-neutral-600">Smart agents handle deals while you focus on what matters.</p>
+            {/* Chat Messages */}
+            <div className="flex-1 p-4 space-y-3 h-[400px] overflow-y-auto">
+              {/* Buyer message */}
+              <div className="flex justify-end">
+                <div className="bg-blue-600 text-white rounded-2xl px-4 py-2 max-w-[70%]">
+                  <p className="text-sm">I'm interested in purchasing a mechanical keyboard. I am willing to pay $90, or $80 if I can pick it up locally.</p>
+                </div>
+              </div>
+
+              {/* AI Agent response */}
+              <div className="flex justify-start">
+                <div className="bg-neutral-100 rounded-2xl px-4 py-2 max-w-[70%]">
+                  <p className="text-sm text-neutral-800">I'll help negotiate the best deal for you. Let me talk to a couple of different sellers.</p>
+                </div>
+              </div>
+
+              {/* Seller response through AI */}
+              <div className="flex justify-start">
+                <div className="bg-green-100 rounded-2xl px-4 py-2 max-w-[70%]">
+                  <p className="text-sm text-green-800"><strong>Seller 1:</strong> Listed at $110. It's in excellent condition, barely used.</p>
+                </div>
+              </div>
+
+              {/* AI negotiating */}
+              <div className="flex justify-start">
+                <div className="bg-neutral-100 rounded-2xl px-4 py-2 max-w-[70%]">
+                  <p className="text-sm text-neutral-800">I found similar keyboards selling for $90-100. Would you accept $95?</p>
+                </div>
+              </div>
+
+              {/* Seller counter */}
+              <div className="flex justify-start">
+                <div className="bg-green-100 rounded-2xl px-4 py-2 max-w-[70%]">
+                  <p className="text-sm text-green-800"><strong>Seller 1:</strong> How about $100? I can include free shipping.</p>
+                </div>
+              </div>
+
+              {/* AI final offer */}
+              <div className="flex justify-start">
+                <div className="bg-blue-100 rounded-2xl px-4 py-2 max-w-[70%]">
+                  <p className="text-sm text-blue-800">🎉 Deal reached at $100 with free shipping! Saved you $10.</p>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Zap className="h-8 w-8 text-neutral-700 mb-4" />
-              <h3 className="font-semibold text-lg">Instant Payments</h3>
-              <p className="text-neutral-600">Secure transactions powered by Flowglad's infrastructure.</p>
-            </div>
-            <div className="space-y-2">
-              <Shield className="h-8 w-8 text-neutral-700 mb-4" />
-              <h3 className="font-semibold text-lg">Trust & Safety</h3>
-              <p className="text-neutral-600">Every transaction is protected and verified.</p>
+
+            {/* Chat Input */}
+            <div className="border-t border-neutral-200 p-3">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Type your message..." 
+                  className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-neutral-50" 
+                  disabled
+                />
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Send</Button>
+              </div>
             </div>
           </div>
         </div>
@@ -140,7 +196,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="border-t border-neutral-200 bg-neutral-50">
         <div className="container mx-auto px-6 py-16 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to start trading?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to simplify your selling?</h2>
           <p className="text-neutral-600 text-lg mb-8 max-w-2xl mx-auto">
             Join thousands using AI-powered negotiations to get better deals.
           </p>

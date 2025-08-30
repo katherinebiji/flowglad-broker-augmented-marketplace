@@ -284,7 +284,7 @@ export default function Chat({ userId, userName }: ChatProps) {
       <div className="px-4 py-3 border-b bg-muted/50 rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-foreground">FlowGlad Broker</h2>
+            <h2 className="font-semibold text-foreground">FlowMarketplace Broker</h2>
             <Badge variant="outline">🤝 Marketplace</Badge>
           </div>
           {chatContext.current_action && (

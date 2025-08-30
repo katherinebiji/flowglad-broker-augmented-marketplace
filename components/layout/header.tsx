@@ -24,7 +24,7 @@ export function Header({ user }: HeaderProps) {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
                 <span className="text-sm font-bold text-white">F</span>
               </div>
-              <span className="text-xl font-semibold tracking-tight">FlowGlad</span>
+              <span className="text-xl font-semibold tracking-tight">FlowMarketplace</span>
             </Link>
 
             {/* Navigation */}

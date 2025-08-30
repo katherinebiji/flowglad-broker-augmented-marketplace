@@ -14,7 +14,7 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "FlowGlad Marketplace",
+  title: "FlowMarketplace",
   description: "AI-powered marketplace with smart negotiations",
 };
 
