@@ -2,36 +2,60 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+import { Card } from './ui/card';
+import { UserRole, ChatContext } from '@/lib/types/marketplace';
 
 interface ChatProps {
   userId?: string;
   userName?: string;
 }
 
-// Define different system prompts
-const SYSTEM_PROMPTS = {
-  SellerPrompt: 'talk in all caps.',
-  BuyerPrompt: 'talk in chinese.',
-} as const;
 
-type SystemPromptKey = keyof typeof SYSTEM_PROMPTS;
+
 
 export default function Chat({ userId, userName }: ChatProps) {
   const [input, setInput] = useState('');
-  const [currentSystemPrompt, setCurrentSystemPrompt] = useState<SystemPromptKey>('BuyerPrompt');
+  const [userRole, setUserRole] = useState<UserRole>('both');
+  const [chatContext, setChatContext] = useState<ChatContext>({});
   
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status } = useChat({
+    initialMessages: [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: `Welcome to FlowGlad! I'm your product broker assistant. I help facilitate transactions between buyers and sellers.
+
+Are you looking to:
+🛒 **Buy** something specific?
+🏷️ **Sell** a product?
+💼 **Browse** current listings?
+
+Just let me know what you're interested in, and I'll guide you through the process!`
+      }
+    ]
+  });
 
   return (
     <div className="flex flex-col h-full max-h-[600px] w-full max-w-2xl mx-auto bg-background border rounded-lg shadow-lg">
       {/* Chat Header */}
       <div className="px-4 py-3 border-b bg-muted/50 rounded-t-lg">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-foreground">Chat</h2>
-          
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-foreground">FlowGlad Broker</h2>
+            <Badge variant="outline">🤝 Marketplace</Badge>
+          </div>
+          {chatContext.current_action && (
+            <Badge variant="secondary">
+              {chatContext.current_action === 'listing' && '🏷️ Listing'}
+              {chatContext.current_action === 'buying' && '🛒 Buying'}
+              {chatContext.current_action === 'negotiating' && '💬 Negotiating'}
+              {chatContext.current_action === 'browsing' && '👀 Browsing'}
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -80,7 +104,43 @@ export default function Chat({ userId, userName }: ChatProps) {
         )}
       </div>
 
-    
+      {/* Quick Actions */}
+      {messages.length <= 1 && (
+        <div className="px-4 py-2 border-t border-b bg-muted/10">
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                sendMessage({ text: "I want to sell a product" });
+                setChatContext({ current_action: 'listing' });
+              }}
+            >
+              🏷️ Sell Item
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                sendMessage({ text: "I'm looking to buy something" });
+                setChatContext({ current_action: 'buying' });
+              }}
+            >
+              🛒 Buy Item
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                sendMessage({ text: "Show me current listings" });
+                setChatContext({ current_action: 'browsing' });
+              }}
+            >
+              👀 Browse Listings
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Input Area */}
       <div className="p-4 border-t bg-muted/20 rounded-b-lg">
@@ -109,9 +169,6 @@ export default function Chat({ userId, userName }: ChatProps) {
             Send
           </Button>
         </form>
-        <p className="text-xs text-muted-foreground mt-2">
-          Current mode: <span className="font-medium">{currentSystemPrompt}</span>
-        </p>
       </div>
     </div>
   );
