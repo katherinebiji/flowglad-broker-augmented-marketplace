@@ -1,70 +1,118 @@
+'use client';
+
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { useState } from 'react';
-import Link from 'next/link';
-import { useHoncho } from '@/context/honchoProvider';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
-export default function Chat() {
-  const [messages, setMessages] = useState<any[]>([]);
+interface ChatProps {
+  userId?: string;
+  userName?: string;
+}
+
+// Define different system prompts
+const SYSTEM_PROMPTS = {
+  SellerPrompt: 'talk in all caps.',
+  BuyerPrompt: 'talk in chinese.',
+} as const;
+
+type SystemPromptKey = keyof typeof SYSTEM_PROMPTS;
+
+export default function Chat({ userId, userName }: ChatProps) {
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { peer, session, error, sendMessage, user } = useHoncho();
-
-  async function handleSendMessage() {
-    if (!input.trim() || !session || !peer) return;
-    setLoading(true);
-    try {
-      setMessages((msgs) => [...msgs, { sender: 'user', text: input }]);
-      const response = await sendMessage(input);
-      setMessages((msgs) => [...msgs, { sender: 'agent', text: response.text }]);
-      setInput('');
-    } catch (err: any) {
-      console.error('Failed to send message:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [currentSystemPrompt, setCurrentSystemPrompt] = useState<SystemPromptKey>('BuyerPrompt');
+  
+  const { messages, sendMessage, status } = useChat();
 
   return (
-    <div className="w-full max-w-md mx-auto border rounded p-4">
-      <h2 className="text-lg font-bold mb-2">AI Broker Chat</h2>
-      <div className="mb-4">
-        <Link href="/">
-          <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded transition">
-            Go back to Vercel Boilerplate
-          </button>
-        </Link>
+    <div className="flex flex-col h-full max-h-[600px] w-full max-w-2xl mx-auto bg-background border rounded-lg shadow-lg">
+      {/* Chat Header */}
+      <div className="px-4 py-3 border-b bg-muted/50 rounded-t-lg">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-foreground">Chat</h2>
+          
+        </div>
       </div>
-      {error && <div className="text-red-500 mb-2">{error}</div>}
-      <div className="h-64 overflow-y-auto bg-gray-50 p-2 mb-2 rounded">
-        {messages.map((msg, i) => (
-          <div key={i} className={msg.sender === 'user' ? 'text-right' : 'text-left'}>
-            <span className={msg.sender === 'user' ? 'bg-blue-200' : 'bg-green-200'} style={{ borderRadius: 8, padding: 4, display: 'inline-block', margin: 2 }}>
-              <b>{msg.sender === 'user' ? 'You' : 'Broker'}:</b> {msg.text}
-            </span>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[400px]">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">Start a conversation...</p>
           </div>
-        ))}
+        ) : (
+          messages.map(message => (
+            <div
+              key={message.id}
+              className={`flex ${
+                message.role === 'user' ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              <div
+                className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-primary text-primary-foreground ml-4'
+                    : 'bg-muted text-muted-foreground mr-4'
+                }`}
+              >
+                {message.parts.map((part, index) =>
+                  part.type === 'text' ? (
+                    <span key={index} className="whitespace-pre-wrap">
+                      {part.text}
+                    </span>
+                  ) : null,
+                )}
+              </div>
+            </div>
+          ))
+        )}
+        {status === 'streaming' && (
+          <div className="flex justify-start">
+            <div className="bg-muted text-muted-foreground mr-4 px-4 py-2 rounded-lg">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      <form
-        className="flex gap-2"
-        onSubmit={e => {
-          e.preventDefault();
-          handleSendMessage();
-        }}
-      >
-        <input
-          className="flex-1 border rounded px-2 py-1"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          disabled={loading}
-          placeholder="Type your message..."
-        />
-        <button
-          className="bg-blue-500 text-white px-4 py-1 rounded"
-          type="submit"
-          disabled={loading || !input.trim()}
+
+    
+
+      {/* Input Area */}
+      <div className="p-4 border-t bg-muted/20 rounded-b-lg">
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            if (input.trim()) {
+              sendMessage({ text: input });
+              setInput('');
+            }
+          }}
+          className="flex space-x-2"
         >
-          Send
-        </button>
-      </form>
+          <Input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            disabled={status !== 'ready'}
+            placeholder="Type your message..."
+            className="flex-1"
+          />
+          <Button 
+            type="submit" 
+            disabled={status !== 'ready' || !input.trim()}
+            className="px-6"
+          >
+            Send
+          </Button>
+        </form>
+        <p className="text-xs text-muted-foreground mt-2">
+          Current mode: <span className="font-medium">{currentSystemPrompt}</span>
+        </p>
+      </div>
     </div>
   );
 }

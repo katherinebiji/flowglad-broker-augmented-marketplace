@@ -91,19 +91,7 @@ export function useHonchoManager() {
     }
   }, [user, initializeHoncho]);
 
-  const sendMessage = useCallback(async (message: string) => {
-    if (!session || !peer || !honchoRef.current) {
-      throw new Error('Honcho not initialized');
-    }
-
-    return await honchoRef.current.sendMessage({
-      sessionId: session.id,
-      peerId: peer.id,
-      text: message,
-    });
-  }, [session, peer]);
-
-  const createNewSession = useCallback(async () => {
+    const createNewSession = useCallback(async () => {
     if (!peer || !honchoRef.current) {
       throw new Error('Peer not initialized');
     }
@@ -120,7 +108,6 @@ export function useHonchoManager() {
     error,
     user,
     honchoRef,
-    sendMessage,
     createNewSession,
     initializeHoncho,
   };
