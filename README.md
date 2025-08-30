@@ -1,4 +1,4 @@
-## FLow Marketplace
+## Flow Marketplace
 An AI-powered marketplace where a middleman agent negotiates on behalf of sellers and buyers.
 We blend Plastic Labs Honcho (personalization + persistent memory) with Flowglad (payments & billing) and Supabase (DB/Auth/Storage) in a Next.js app.
 
