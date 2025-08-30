@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { FlowgladProvider } from "@flowglad/nextjs";
+import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -19,11 +21,16 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`}>
@@ -33,7 +40,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <FlowgladProvider loadBilling={!!user}>
+            {children}
+          </FlowgladProvider>
         </ThemeProvider>
       </body>
     </html>
