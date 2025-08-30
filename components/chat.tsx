@@ -2,12 +2,102 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { UserRole, ChatContext } from '@/lib/types/marketplace';
+import { createClient } from '@/lib/supabase/client';
+
+// Component to render text with embedded images
+function MessageWithImages({ text }: { text: string }) {
+  // Regular expression to find image URLs (including the specific pattern from the message)
+  const imageUrlRegex = /(https:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp))/gi;
+  const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/gi;
+  
+  // First, handle markdown image syntax ![alt](url)
+  let processedText = text;
+  const markdownMatches = Array.from(text.matchAll(markdownImageRegex));
+  
+  if (markdownMatches.length > 0) {
+    return (
+      <div>
+        {markdownMatches.map((match, index) => {
+          const [fullMatch, altText, imageUrl] = match;
+          const parts = processedText.split(fullMatch);
+          const beforeImage = parts[0];
+          const afterImage = parts.slice(1).join(fullMatch);
+          processedText = afterImage;
+          
+          return (
+            <div key={index}>
+              {beforeImage && (
+                <span className="whitespace-pre-wrap">{beforeImage}</span>
+              )}
+              <div className="mt-2 mb-2">
+                <img
+                  src={imageUrl}
+                  alt={altText || 'Product image'}
+                  className="max-w-xs max-h-48 rounded-lg border shadow-sm"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              </div>
+              {index === markdownMatches.length - 1 && afterImage && (
+                <span className="whitespace-pre-wrap">{afterImage}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  
+  // If no markdown images, check for plain URLs
+  const imageUrls = text.match(imageUrlRegex);
+  
+  if (imageUrls && imageUrls.length > 0) {
+    const parts = text.split(imageUrlRegex);
+    
+    return (
+      <div>
+        {parts.map((part, index) => {
+          // Check if this part is an image URL
+          if (imageUrls.includes(part)) {
+            return (
+              <div key={index} className="mt-2 mb-2">
+                <img
+                  src={part}
+                  alt="Product image"
+                  className="max-w-xs max-h-48 rounded-lg border shadow-sm"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              </div>
+            );
+          }
+          
+          // Regular text part
+          return part ? (
+            <span key={index} className="whitespace-pre-wrap">
+              {part}
+            </span>
+          ) : null;
+        })}
+      </div>
+    );
+  }
+  
+  // No images found, just return the text
+  return <span className="whitespace-pre-wrap">{text}</span>;
+}
 
 interface ChatProps {
   userId?: string;
@@ -21,26 +111,146 @@ export default function Chat({ userId, userName }: ChatProps) {
   const [input, setInput] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('both');
   const [chatContext, setChatContext] = useState<ChatContext>({});
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const supabase = createClient();
   
-  const { messages, sendMessage, status } = useChat({
-    initialMessages: [
-      {
-        id: 'welcome',
-        role: 'assistant',
-        content: `Welcome to FlowGlad! I'm your product broker assistant. I help facilitate transactions between buyers and sellers.
-
-Are you looking to:
-🛒 **Buy** something specific?
-🏷️ **Sell** a product?
-💼 **Browse** current listings?
-
-Just let me know what you're interested in, and I'll guide you through the process!`
-      }
-    ]
+  const { messages, sendMessage, status } = useChat({ 
   });
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    setIsUploading(true);
+    try {
+      // Create unique filename
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${file.name}`;
+      const filePath = `product-images/${fileName}`;
+
+      // Upload file to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('marketplace')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Upload error:', error);
+        if (error.message.includes('row-level security policy')) {
+          alert('Storage bucket not configured. Please set up the marketplace bucket in Supabase Storage with proper policies.');
+        }
+        return null;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('marketplace')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Upload failed:', error);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const processFile = async (file: File, autoSend: boolean = false) => {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (6MB limit)
+    if (file.size > 6 * 1024 * 1024) {
+      alert('File size must be less than 6MB');
+      return;
+    }
+
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setUploadedImages(prev => [...prev, imageUrl]);
+      
+      // Only send message automatically if autoSend is true (for button click)
+      if (autoSend) {
+        const imageMessage = `I've uploaded an image for my product: ${imageUrl}. Please note this image URL when I provide product details.`;
+        sendMessage({ text: imageMessage });
+      }
+    } else {
+      alert('Failed to upload image. Please try again.');
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    await processFile(files[0], true); // Auto-send for button click
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      alert('Please drop image files only');
+      return;
+    }
+
+    // Process first image file (don't auto-send for drag & drop)
+    if (imageFiles.length > 0) {
+      await processFile(imageFiles[0], false);
+    }
+
+    if (imageFiles.length > 1) {
+      alert('Only the first image was uploaded. Please upload one image at a time.');
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full max-h-[600px] w-full max-w-2xl mx-auto bg-background border rounded-lg shadow-lg">
+    <div 
+      className={`flex flex-col h-full max-h-[600px] w-full max-w-2xl mx-auto bg-background border rounded-lg shadow-lg relative ${
+        isDragOver ? 'border-primary border-2 bg-primary/5' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag Overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-50">
+          <div className="text-center">
+            <div className="text-4xl mb-2">📷</div>
+            <p className="text-lg font-semibold text-primary">Drop image here</p>
+            <p className="text-sm text-muted-foreground">Upload product images (max 6MB)</p>
+          </div>
+        </div>
+      )}
+
       {/* Chat Header */}
       <div className="px-4 py-3 border-b bg-muted/50 rounded-t-lg">
         <div className="flex items-center justify-between">
@@ -82,9 +292,9 @@ Just let me know what you're interested in, and I'll guide you through the proce
               >
                 {message.parts.map((part, index) =>
                   part.type === 'text' ? (
-                    <span key={index} className="whitespace-pre-wrap">
-                      {part.text}
-                    </span>
+                    <div key={index}>
+                      <MessageWithImages text={part.text} />
+                    </div>
                   ) : null,
                 )}
               </div>
@@ -144,16 +354,67 @@ Just let me know what you're interested in, and I'll guide you through the proce
 
       {/* Input Area */}
       <div className="p-4 border-t bg-muted/20 rounded-b-lg">
+        {/* Uploaded Images Preview */}
+        {uploadedImages.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {uploadedImages.map((url, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={url}
+                  alt="Uploaded"
+                  className="w-16 h-16 object-cover rounded border"
+                />
+                <button
+                  onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== index))}
+                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        
         <form
           onSubmit={e => {
             e.preventDefault();
-            if (input.trim()) {
-              sendMessage({ text: input });
+            if (input.trim() || uploadedImages.length > 0) {
+              let messageText = input;
+              
+              // Include uploaded images in the message
+              if (uploadedImages.length > 0) {
+                const imageUrls = uploadedImages.join(', ');
+                messageText += uploadedImages.length > 0 && input.trim() 
+                  ? ` [Images: ${imageUrls}]` 
+                  : `I've uploaded images for my product: ${imageUrls}. Please note these image URLs when I provide product details.`;
+              }
+              
+              sendMessage({ text: messageText });
               setInput('');
+              setUploadedImages([]); // Clear uploaded images after sending
             }
           }}
           className="flex space-x-2"
         >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || status !== 'ready'}
+            className="px-3"
+          >
+            {isUploading ? '📤' : '📷'}
+          </Button>
+          
           <Input
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -163,7 +424,7 @@ Just let me know what you're interested in, and I'll guide you through the proce
           />
           <Button 
             type="submit" 
-            disabled={status !== 'ready' || !input.trim()}
+            disabled={status !== 'ready' || (!input.trim() && uploadedImages.length === 0)}
             className="px-6"
           >
             Send

@@ -35,14 +35,23 @@ export async function POST(req: Request) {
 - Suggest fair market values
 
 **During negotiations:**
-- Present offers/counteroffers clearly
-- Explain market reasoning for suggested prices
 - Help both parties understand the other's perspective
 - Work toward closing deals that benefit everyone
+
+**When showing listings:**
+- ALWAYS display images of the product if available
 
 Start each conversation by asking if they're looking to buy or sell, and what product category they're interested in.`,
     messages: convertToModelMessages(messages),
     tools: {
+        getCurrentUser:{
+            description: 'Get the current user id',
+            inputSchema: z.object({}),
+            execute: async () => {
+                const { data: { user } } = await (await createClient()).auth.getUser();
+                return user?.id || '';
+            },
+        },
         getProductInformation: {
           description: 'Get all products available in the marketplace',
           inputSchema: z.object({ query: z.string()}),
@@ -53,8 +62,57 @@ Start each conversation by asking if they're looking to buy or sell, and what pr
             return products || [];
           },
         },
-      },
-      stopWhen: stepCountIs(5),
+        getSellerIntent:{
+         description: 'Get the intent of the seller',
+         inputSchema: z.object({ query: z.string()}),
+         execute: async ({ query }: { query: string }) => {
+            //add honcho id and logic here, im adding placeholder random
+        
+           return 'Seller is willing to sell for 50$ if it has been a week since the product was listed';
+         },
+       },
+               addProduct:{
+         description: 'Add a product to the marketplace',
+         inputSchema: z.object({ 
+           title: z.string(),
+           description: z.string(),
+           current_price: z.number(),
+           image_url: z.string().optional(),
+           status: z.string().optional(),
+           seller_id: z.string()
+         }),
+         execute: async ({ title, description, current_price, image_url, status, seller_id }: { 
+           title: string, 
+           description: string, 
+           current_price: number, 
+           image_url?: string, 
+           status?: string,
+           seller_id: string
+         }) => {
+           const { data: product, error } = await (await createClient())
+             .from('products')
+             .insert({
+               title,
+               description,
+               current_price,
+               image_url: image_url || null,
+               status: status || 'active',
+               seller_id
+
+             })
+             .select()
+             .single();
+             
+           if (error) {
+             return `Error adding product: ${error.message}`;
+           }
+           
+           return `Product "${title}" successfully added to marketplace with ID: ${product.id}`;
+         },
+        }
+     },
+     stopWhen: stepCountIs(5),
+      
   });
 
   return result.toUIMessageStreamResponse();
