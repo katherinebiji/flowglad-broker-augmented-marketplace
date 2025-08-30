@@ -2,9 +2,10 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useHoncho } from '@/context/honchoProvider';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { UserRole, ChatContext } from '@/lib/types/marketplace';
@@ -104,9 +105,6 @@ interface ChatProps {
   userName?: string;
 }
 
-
-
-
 export default function Chat({ userId, userName }: ChatProps) {
   const [input, setInput] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('both');
@@ -117,9 +115,40 @@ export default function Chat({ userId, userName }: ChatProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   
-  const { messages, sendMessage, status } = useChat({ 
+  const {
+    user: honchoUser,
+    session: honchoSession,
+    peer: honchoPeer,
+    loading: honchoLoading,
+    error: honchoError,
+    honchoRef,
+    createNewSession,
+    initializeHoncho,
+  } = useHoncho();
+ const { messages, sendMessage, status } = useChat({ 
   });
 
+  // Wrapper to send to both chat and Honcho
+  const handleSendMessage = useCallback(
+    async (msgObj: { text: string }) => {
+      sendMessage(msgObj);
+      // Try to add message to Honcho session if possible
+      console.log("honchoUser:", honchoUser);
+      console.log("honchoSession:", honchoSession);
+      console.log("honchoPeer:", honchoPeer);
+      
+      if (honchoUser && honchoSession && honchoPeer) {
+        try {
+          console.log('Sending message to Honcho:', msgObj.text);
+          await honchoSession.addMessages([honchoPeer.message(msgObj.text)])
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    },
+    [sendMessage, honchoUser, honchoSession, honchoPeer]
+  );
+ 
   const uploadImage = async (file: File): Promise<string | null> => {
     setIsUploading(true);
     try {
@@ -322,7 +351,7 @@ export default function Chat({ userId, userName }: ChatProps) {
               variant="outline" 
               size="sm"
               onClick={() => {
-                sendMessage({ text: "I want to sell a product" });
+                handleSendMessage({ text: "I want to sell a product" });
                 setChatContext({ current_action: 'listing' });
               }}
             >
@@ -332,7 +361,7 @@ export default function Chat({ userId, userName }: ChatProps) {
               variant="outline" 
               size="sm"
               onClick={() => {
-                sendMessage({ text: "I'm looking to buy something" });
+                handleSendMessage({ text: "I'm looking to buy something" });
                 setChatContext({ current_action: 'buying' });
               }}
             >
@@ -342,7 +371,7 @@ export default function Chat({ userId, userName }: ChatProps) {
               variant="outline" 
               size="sm"
               onClick={() => {
-                sendMessage({ text: "Show me current listings" });
+                handleSendMessage({ text: "Show me current listings" });
                 setChatContext({ current_action: 'browsing' });
               }}
             >
@@ -376,7 +405,7 @@ export default function Chat({ userId, userName }: ChatProps) {
         )}
         
         <form
-          onSubmit={e => {
+          onSubmit={async e => {
             e.preventDefault();
             if (input.trim() || uploadedImages.length > 0) {
               let messageText = input;
@@ -389,7 +418,7 @@ export default function Chat({ userId, userName }: ChatProps) {
                   : `I've uploaded images for my product: ${imageUrls}. Please note these image URLs when I provide product details.`;
               }
               
-              sendMessage({ text: messageText });
+              handleSendMessage({ text: messageText });
               setInput('');
               setUploadedImages([]); // Clear uploaded images after sending
             }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { FlowgladProvider } from "@flowglad/nextjs";
+import { HonchoProvider } from '@/context/honchoProvider';
 import { createClient } from "@/lib/supabase/server";
 import "./globals.css";
 
@@ -41,7 +42,9 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <FlowgladProvider loadBilling={!!user}>
-            {children}
+            <HonchoProvider>
+              {children}
+            </HonchoProvider>
           </FlowgladProvider>
         </ThemeProvider>
       </body>
