@@ -2,9 +2,10 @@
 
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useHoncho } from '@/context/honchoProvider';
 import { Badge } from './ui/badge';
 import { Card } from './ui/card';
 import { UserRole, ChatContext } from '@/lib/types/marketplace';
@@ -13,9 +14,6 @@ interface ChatProps {
   userId?: string;
   userName?: string;
 }
-
-
-
 
 export default function Chat({ userId, userName }: ChatProps) {
   const [input, setInput] = useState('');
@@ -38,6 +36,38 @@ Just let me know what you're interested in, and I'll guide you through the proce
       }
     ]
   });
+  
+  const {
+    user: honchoUser,
+    session: honchoSession,
+    peer: honchoPeer,
+    loading: honchoLoading,
+    error: honchoError,
+    honchoRef,
+    createNewSession,
+    initializeHoncho,
+  } = useHoncho();
+
+  // Wrapper to send to both chat and Honcho
+  const handleSendMessage = useCallback(
+    async (msgObj: { text: string }) => {
+      sendMessage(msgObj);
+      // Try to add message to Honcho session if possible
+      console.log("honchoUser:", honchoUser);
+      console.log("honchoSession:", honchoSession);
+      console.log("honchoPeer:", honchoPeer);
+      
+      if (honchoUser && honchoSession && honchoPeer) {
+        try {
+          console.log('Sending message to Honcho:', msgObj.text);
+          await honchoSession.addMessages([honchoPeer.message(msgObj.text)])
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    },
+    [sendMessage, honchoUser, honchoSession, honchoPeer]
+  );
 
   return (
     <div className="flex flex-col h-full max-h-[600px] w-full max-w-2xl mx-auto bg-background border rounded-lg shadow-lg">
@@ -112,7 +142,7 @@ Just let me know what you're interested in, and I'll guide you through the proce
               variant="outline" 
               size="sm"
               onClick={() => {
-                sendMessage({ text: "I want to sell a product" });
+                handleSendMessage({ text: "I want to sell a product" });
                 setChatContext({ current_action: 'listing' });
               }}
             >
@@ -122,7 +152,7 @@ Just let me know what you're interested in, and I'll guide you through the proce
               variant="outline" 
               size="sm"
               onClick={() => {
-                sendMessage({ text: "I'm looking to buy something" });
+                handleSendMessage({ text: "I'm looking to buy something" });
                 setChatContext({ current_action: 'buying' });
               }}
             >
@@ -132,7 +162,7 @@ Just let me know what you're interested in, and I'll guide you through the proce
               variant="outline" 
               size="sm"
               onClick={() => {
-                sendMessage({ text: "Show me current listings" });
+                handleSendMessage({ text: "Show me current listings" });
                 setChatContext({ current_action: 'browsing' });
               }}
             >
@@ -145,10 +175,10 @@ Just let me know what you're interested in, and I'll guide you through the proce
       {/* Input Area */}
       <div className="p-4 border-t bg-muted/20 rounded-b-lg">
         <form
-          onSubmit={e => {
+          onSubmit={async e => {
             e.preventDefault();
             if (input.trim()) {
-              sendMessage({ text: input });
+              await handleSendMessage({ text: input });
               setInput('');
             }
           }}

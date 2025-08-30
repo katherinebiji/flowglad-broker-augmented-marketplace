@@ -75,7 +75,7 @@ export function useHonchoManager() {
       
       setPeer(peer);
       
-      const session = await honchoRef.current.createSession({ peerId: peer.id });
+      const session = await honchoRef.current.session(peer.id);
       setSession(session);
       
     } catch (err: any) {
@@ -91,7 +91,7 @@ export function useHonchoManager() {
     }
   }, [user, initializeHoncho]);
 
-    const createNewSession = useCallback(async () => {
+  const createNewSession = useCallback(async () => {
     if (!peer || !honchoRef.current) {
       throw new Error('Peer not initialized');
     }
