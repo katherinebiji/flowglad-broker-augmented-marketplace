@@ -4,6 +4,8 @@ import { ThemeProvider } from "next-themes";
 import { FlowgladProvider } from "@flowglad/nextjs";
 import { HonchoProvider } from '@/context/honchoProvider';
 import { createClient } from "@/lib/supabase/server";
+import { Header } from "@/components/layout/header";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -12,8 +14,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "FlowGlad Marketplace",
+  description: "AI-powered marketplace with smart negotiations",
 };
 
 const geistSans = Geist({
@@ -34,16 +36,18 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`}>
+      <body className={`${geistSans.className} antialiased min-h-screen bg-neutral-50`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <FlowgladProvider loadBilling={!!user}>
             <HonchoProvider>
-              {children}
+              <Header user={user} />
+              <main>{children}</main>
+              <Toaster position="bottom-right" />
             </HonchoProvider>
           </FlowgladProvider>
         </ThemeProvider>
