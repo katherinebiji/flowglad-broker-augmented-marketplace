@@ -1,7 +1,9 @@
 import { openai } from '@ai-sdk/openai';
 import { convertToModelMessages, streamText, UIMessage, stepCountIs } from 'ai';
 import { z } from 'zod';
+import { Honcho } from '@honcho-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
 
 Start each conversation by asking if they're looking to buy or sell, and what product category they're interested in.`,
     messages: convertToModelMessages(messages),
-    tools: {
+  tools: {
         getCurrentUser:{
             description: 'Get the current user id',
             inputSchema: z.object({}),
@@ -51,6 +53,13 @@ Start each conversation by asking if they're looking to buy or sell, and what pr
                 const { data: { user } } = await (await createClient()).auth.getUser();
                 return user?.id || '';
             },
+        },
+        getSellerId:{
+          description: 'Get the seller id from the product',
+          inputSchema: z.object({ product_id: z.string() }),
+          execute: async ({ product_id }: { product_id: string }) => {
+            
+          }
         },
         getProductInformation: {
           description: 'Get all products available in the marketplace',
@@ -63,12 +72,46 @@ Start each conversation by asking if they're looking to buy or sell, and what pr
           },
         },
         getSellerIntent:{
-         description: 'Get the intent of the seller',
-         inputSchema: z.object({ query: z.string()}),
-         execute: async ({ query }: { query: string }) => {
-            //add honcho id and logic here, im adding placeholder random
-        
-           return 'Seller is willing to sell for 50$ if it has been a week since the product was listed';
+         description: 'Get the seller intent with the product_id.',
+         inputSchema: z.object({ query: z.string(), product_id: z.string() }),
+         execute: async ({ query, product_id }: { query: string, product_id: string }) => {
+            // Initialize Honcho client on the server
+            const honcho = new Honcho({});
+
+            // Find or create a session tied to the seller_id
+            console.log('🧠 Analyzing seller intent with Honcho session:', { product_id, query });
+            const { data: product } = await (await createClient())
+              .from('products')
+              .select('seller_id')
+              .eq('id', product_id)
+              .single();
+            const seller_id = product?.seller_id || '';
+            const session = await honcho.session(seller_id);
+            const seller = await honcho.peer(seller_id);
+
+            // If session supports chat helper, use it to interpret seller intent
+            let sellerIntent = `Could not determine seller intent for peer ${seller_id}`;
+            console
+            console.log('🧠 Analyzing seller intent with Honcho session:', { seller_id, query });
+            try {
+              const resp = seller.chat(query);
+              if (session) {
+                // Ask Honcho to summarize the seller's intent given the query
+                const resp = await seller.chat(query);
+                if (resp && typeof resp === 'string') {
+                  sellerIntent = resp;
+                }
+              } else {
+                // Fallback: try to get context and return
+                const ctx = await (session as any).getContext?.(true, 2000).catch(() => null);
+                sellerIntent = ctx ? `${ctx}` : sellerIntent;
+              }
+            } catch (err) {
+              sellerIntent = `Error retrieving seller intent: ${(err as any)?.message || String(err)}`;
+            }
+
+            console.log('🧠 Seller intent analysis result:', sellerIntent);
+            return sellerIntent;
          },
        },
                addProduct:{
